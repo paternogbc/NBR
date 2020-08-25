@@ -17,4 +17,6 @@ Depends:
     googlesheets4,
     flextable,
     writexl,
-    tidyr
+    tidyr,
+    openxlsx,
+    webshot 

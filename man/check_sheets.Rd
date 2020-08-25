@@ -4,7 +4,7 @@
 \alias{check_sheets}
 \title{Perform all checks}
 \usage{
-check_sheets(inf, dat, ref)
+check_sheets(inf, dat)
 }
 \description{
 Perform all checks

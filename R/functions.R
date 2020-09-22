@@ -24,13 +24,13 @@ check_sheets <- function(inf, dat){
 
 
 #' Load and check data
-load_save_data <- function(link, root = "Rel_NBR-Termico") {
+load_save_data <- function(link, root) {
+
   if(!dir.exists(paths = root)){dir.create(path = root)}
 
   # Checks---------------------------
   inf <- googlesheets4::read_sheet(ss = link, sheet = 1)
   dat <- googlesheets4::read_sheet(ss = link, sheet = 2)
-  #ref <- googlesheets4::read_sheet(ss = link, sheet = 3)
 
   check_sheets(inf, dat)
 
@@ -50,31 +50,25 @@ load_save_data <- function(link, root = "Rel_NBR-Termico") {
           substr(inf$Estação, start = 0, stop = 3),
           sep = "_")
 
-  if(!dir.exists(paths = paste(root, folder, sep = "/"))){
-    dir.create(path = paste(root, folder, sep = "/"))
-  }
+  # Create folder with client id number
   if(!dir.exists(paths = paste(root, folder, sep = "/"))){
     dir.create(path = paste(root, folder, sep = "/"))
   }
   if(!dir.exists(paths = paste(root, folder, folder_2, sep = "/"))){
     dir.create(path = paste(root, folder, folder_2, sep = "/"))
   }
-  if(!dir.exists(paths = paste(root, folder, folder_2, subfolder, sep = "/"))){
-    dir.create(path =  paste(root, folder, folder_2, subfolder, sep = "/"))
-  }
 
-  file_path <- paste(root, folder, folder_2, subfolder, sep = "/")
+  file_path <- paste(root, folder, folder_2, sep = "/")
 
   # Save raw data
   raw_data <- list(inf = inf, dat = dat, folder = folder,
                    file_name = file_name,
                    fine_path = file_path)
-  #write_rds(raw_data, path = paste("data/temp/raw_data.Rds", sep = "/"))
 
   # Save XLSX copy
   writexl::write_xlsx(x = raw_data[1:2],
              path = paste(file_path, "/",
-                          file_name, "_tab_dados.xlsx", sep = ""))
+                          file_name, "_dados_brutos.xlsx", sep = ""))
   return(raw_data)
 }
 
@@ -85,9 +79,8 @@ load_save_data <- function(link, root = "Rel_NBR-Termico") {
 #'
 #' @return Several plots and tables as a result of the NBR norm.
 #' @export
-relatorio <- function(link, root = "Rel_NBR-Termico"){
-#  link <- "https://docs.google.com/spreadsheets/d/1fTcflqGi_qiPwDrDza-a__0x-W_TEob9qxI7uqA9YuU/edit?usp=sharing"
-  raw <- load_save_data(link = link)
+relatorio <- function(link, root = "Rel_NBR"){
+  raw <- load_save_data(link = link, root)
   inf <- raw$inf
   dat <- raw$dat
   tdt  <- inf$`temperatura do dia típico`
@@ -122,7 +115,7 @@ relatorio <- function(link, root = "Rel_NBR-Termico"){
   # 1. transpose data----------------------------------------------------------------
   dat$Hora <- lubridate::hour(dat$Hora)
   dat_long <- tidyr::pivot_longer(dat, -c("Hora", "cenario"))
-  dat_long$value <- round(dat_long$value, digits = 1)
+  dat_long$value <- round(dat_long$value, digits = 2)
 
   # 2. Parameters--------------------------------------------------------------------
   # Valores temp referência
@@ -277,17 +270,17 @@ relatorio <- function(link, root = "Rel_NBR-Termico"){
   # Salvar tabelas----------------------------------------------------------------
   openxlsx::write.xlsx(x  = tabela_final,
                        file = paste(file_path,
-                                    paste(file_name, "tab_res_final",
+                                    paste(file_name, "tab_final",
                                           paste(inf$responsável, ".xlsx", sep = ""), sep = "_"),
                                     sep = "/"))
   flextable::save_as_image(x = final_tab_classe,
                 paste(file_path,
-                      paste(file_name, "tab_res_resumo",
+                      paste(file_name, "tab_resumo",
                             paste(inf$responsável, ".png", sep = ""), sep = "_"),
                       sep = "/"))
   flextable::save_as_image(x = final_tab_number,
                 paste(file_path,
-                      paste(file_name, "tab_res_detalhe",
+                      paste(file_name, "tab_detalhe",
                             paste(inf$responsável, ".png", sep = ""), sep = "_"),
                       sep = "/"))
   # Plots-------------------------------------------------------------------------
@@ -342,8 +335,7 @@ relatorio <- function(link, root = "Rel_NBR-Termico"){
                    filter(Hora == min(Hora)),
                  aes(y = value, x = Hora))
   }
-
-  # 1. Resultado Final
+  # Resultado Final----------------------------------------------------------
   res_tab %>%
     ungroup() %>%
     mutate(resultado = ifelse(classe == "Não atende", yes = "reprovado", no = "aprovado")) ->
@@ -359,7 +351,7 @@ relatorio <- function(link, root = "Rel_NBR-Termico"){
                      xend = name, yend = temp_min), color = gray(.3))  +
     scale_color_manual(values = c(gray(.2), "red")) +
     geom_text(aes(x = name, y = res, label = res),
-              nudge_x = -.35, size = 2.5) +
+              nudge_x = -.35, size = 3) +
     geom_point(aes(y = res, x = name),
                show.legend = FALSE, size = 3, alpha = 1, fill = gray(.2), shape = 21) +
     geom_point(aes(y = res, x = name, color = resultado),
@@ -372,7 +364,7 @@ relatorio <- function(link, root = "Rel_NBR-Termico"){
                         labels = as.character(ref_tab$classe)) +
     coord_flip() +
     facet_wrap(~ cenario) +
-    theme_classic(base_size = 14) +
+    theme_classic(base_size = 13) +
     labs(y = "Temperatura (°C)",
          x = "Ambiente",
          title = paste("Desempenho de", inf$Estação),
@@ -386,20 +378,45 @@ relatorio <- function(link, root = "Rel_NBR-Termico"){
           legend.key = element_rect(color = gray(.3), size = .5))
 
   # Save plots--------------------------------------------------------------------
+  # plot dimentions
+  width_final = 8
+  height_final = 6
+  width_hora = 10
+  height_hora = 7.5
+
+  # Números de cenários / i.g inverno
+  if(n_cenario == 1){
+    height_final = 4.5
+    width_final = 5
+    g_final <- g_final + theme(
+      legend.text = element_text(size = 8)
+    )
+  }
+
+  # Número de ambientes = 3
+  if(n_ambient == 3){
+    width_hora = 8
+    height_hora = 4.5
+  }
+  # Número de ambientes = 4
+  if(n_ambient == 4){
+    width_hora = 8
+    height_hora = 7.5
+  }
+
   ggsave(plot = g_final,
          filename = paste(file_path,
-                          paste(file_name, "fig_res_final",
+                          paste(file_name, "fig_final",
                                 paste(inf$responsável, ".png",sep = ""),
                                 sep = "_"),
                           sep = "/"),
-         height = 6, width = 8)
+         height = height_final, width = width_final)
 
   ggsave(plot = g_hora,
          filename = paste(file_path,
-                          paste(file_name, "fig_res_hora",
+                          paste(file_name, "fig_hora",
                                 paste(inf$responsável, ".png",sep = ""),
                                 sep = "_"),
                           sep = "/"),
-         height = 7.5, width = 10)
+         height = height_hora, width = width_hora)
 }
-

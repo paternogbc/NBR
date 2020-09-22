@@ -4,7 +4,7 @@
 \alias{relatorio}
 \title{Relatório NBR}
 \usage{
-relatorio(link, root = "Rel_NBR-Termico")
+relatorio(link, root = "Rel_NBR")
 }
 \arguments{
 \item{link}{"The google sheet sharing link"}

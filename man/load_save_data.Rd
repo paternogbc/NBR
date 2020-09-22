@@ -4,7 +4,7 @@
 \alias{load_save_data}
 \title{Load and check data}
 \usage{
-load_save_data(link, root = "Rel_NBR-Termico")
+load_save_data(link, root)
 }
 \description{
 Load and check data
